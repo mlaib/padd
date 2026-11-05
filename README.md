@@ -57,3 +57,7 @@ cargo test
 
 CI runs on the Mac mini: `ci/ci.sh` (macOS universal `.app`, Linux arm64/x86_64, Windows x86_64 → `dist/`).
 Design notes and the research behind the choices are in [docs/DESIGN.md](docs/DESIGN.md).
+
+## License
+
+[MIT](LICENSE)
