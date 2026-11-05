@@ -23,6 +23,13 @@ lipo -create -output "$APP/Contents/MacOS/padd" \
     "$CARGO_TARGET_DIR/aarch64-apple-darwin/release/padd" \
     "$CARGO_TARGET_DIR/x86_64-apple-darwin/release/padd"
 sed "s/@VERSION@/$VERSION/g" ci/Info.plist > "$APP/Contents/Info.plist"
+mkdir -p "$APP/Contents/Resources"
+ICONSET=$(mktemp -d)/padd.iconset; mkdir -p "$ICONSET"
+for s in 16 32 128 256 512; do
+    sips -z $s $s assets/padd-1024.png --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
+    sips -z $((s*2)) $((s*2)) assets/padd-1024.png --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
+done
+iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/padd.icns"
 codesign --force --sign - "$APP"   # ad-hoc signature (required on Apple Silicon)
 rm -f "$OUT/padd-macos-universal.zip"
 (cd "$OUT" && ditto -c -k --keepParent Padd.app padd-macos-universal.zip)

@@ -12,7 +12,7 @@ with **encrypted secrets files**. Linux, Windows and macOS: one ~9 MB native bin
 
 ## Secrets
 
-Write any line as `label::: value`:
+Write any line as label::: value
 
 ```markdown
 ## OpenAI

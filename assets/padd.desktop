@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Padd
+GenericName=Text Editor
+Comment=Markdown, structured text and encrypted secrets
+Exec=padd %F
+Icon=padd
+Terminal=false
+Categories=Utility;TextEditor;
+Keywords=markdown;text;editor;secrets;password;
+MimeType=text/markdown;text/x-markdown;text/plain;application/json;application/x-yaml;application/xml;text/x-log;
+StartupWMClass=padd

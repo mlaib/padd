@@ -21,6 +21,9 @@ age = { version = "0.12", default-features = false, features = ["armor"] }
 zeroize = "1.9"
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal", "wayland"] }
 
+[build-dependencies]
+embed-resource = "3.0" # Windows .exe icon; build-time only
+
 [features]
 default = []
 a11y = ["eframe/accesskit"] # screen-reader support, +1.6 MB

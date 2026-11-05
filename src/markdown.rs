@@ -14,9 +14,12 @@ use crate::secrets;
 use crate::theme::Palette;
 
 /// Width reserved in front of a secret value for the [show] and [copy] buttons.
-pub const SECRET_BUTTONS_W: f32 = 46.0;
-/// Extra width for the "••••••••" mask when the value is hidden.
-pub const SECRET_MASK_W: f32 = 70.0;
+pub const SECRET_BUTTONS_W: f32 = 48.0;
+
+/// Space reserved before a secret value: buttons, plus the "••••••••" mask when hidden.
+pub fn secret_gap(size: f32, revealed: bool) -> f32 {
+    SECRET_BUTTONS_W + if revealed { 0.0 } else { size * 5.2 }
+}
 
 const EMPH: u16 = 1;
 const STRONG: u16 = 1 << 1;
@@ -110,7 +113,7 @@ pub fn layout(
         let mut hidden_value = false;
         if let Some(sec) = sec_here {
             if !sec.active {
-                leading = SECRET_BUTTONS_W + if sec.revealed { 0.0 } else { SECRET_MASK_W };
+                leading = secret_gap(size, sec.revealed);
                 hidden_value = !sec.revealed;
             }
             secrets[k].value_char = chars;
@@ -199,6 +202,13 @@ fn format_for(s: St, act: bool, hidden_value: bool, pal: &Palette, size: f32) ->
         fmt.color = pal.weak;
         fmt.background = Color32::TRANSPARENT;
     }
+    // Comfortable reading rhythm: 1.5× line height for prose, a bit tighter for code.
+    let lh = if f & (CODE | CODEBLOCK | TABLE) != 0 {
+        1.35
+    } else {
+        1.5
+    };
+    fmt.line_height = Some((fmt.font_id.size * lh).round());
     fmt
 }
 

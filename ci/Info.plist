@@ -6,6 +6,7 @@
     <key>CFBundleDisplayName</key><string>Padd</string>
     <key>CFBundleIdentifier</key><string>net.mlaib.padd</string>
     <key>CFBundleExecutable</key><string>padd</string>
+    <key>CFBundleIconFile</key><string>padd</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleVersion</key><string>@VERSION@</string>
     <key>CFBundleShortVersionString</key><string>@VERSION@</string>
