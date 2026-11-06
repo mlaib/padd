@@ -4,9 +4,10 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use eframe::egui::{
-    self, Align, Align2, FontId, Galley, Key, Margin, Rect, RichText, TextBuffer, pos2, vec2,
+    self, Align, Align2, CornerRadius, FontId, Galley, Key, Margin, Rect, RichText, Shape, Stroke,
+    StrokeKind, TextBuffer, pos2, vec2,
 };
-use egui::text::{CCursor, CCursorRange};
+use egui::text::{CCursor, CCursorRange, LayoutJob, TextFormat};
 
 use super::chrome::{Icon, icon_button, paint_icon};
 use super::{Body, Kind, LayoutCache, MAX_RICH, PaddApp};
@@ -293,23 +294,35 @@ impl PaddApp {
                                 if let Some(c) = cache.as_ref().filter(|c| c.key == key) {
                                     return c.galley.clone();
                                 }
-                                let (mut job, secrets) = if md {
-                                    let s = markdown::layout(text, active.clone(), revealed, &pal, size);
-                                    (s.job, s.secrets)
+                                let (mut job, secrets, grids) = if md {
+                                    let max_w = if wrap { wrap_width } else { f32::INFINITY };
+                                    let s = ui.fonts_mut(|f| {
+                                        let mut measure = |s: &str, fmt: &TextFormat| {
+                                            let job = LayoutJob::single_section(s.to_owned(), fmt.clone());
+                                            f.layout_job(job).size().x
+                                        };
+                                        markdown::layout(
+                                            text,
+                                            active.clone(),
+                                            revealed,
+                                            &pal,
+                                            size,
+                                            max_w,
+                                            &mut measure,
+                                        )
+                                    });
+                                    (s.job, s.secrets, s.grids)
                                 } else if let Some(syn) = syntax {
                                     (
                                         hl.job(text, syn, pal.dark, FontId::monospace(mono_size)),
+                                        Vec::new(),
                                         Vec::new(),
                                     )
                                 } else {
                                     let font = FontId::monospace(mono_size);
                                     (
-                                        egui::text::LayoutJob::simple(
-                                            text.to_owned(),
-                                            font,
-                                            pal.text,
-                                            f32::INFINITY,
-                                        ),
+                                        LayoutJob::simple(text.to_owned(), font, pal.text, f32::INFINITY),
+                                        Vec::new(),
                                         Vec::new(),
                                     )
                                 };
@@ -319,18 +332,23 @@ impl PaddApp {
                                     key,
                                     galley: galley.clone(),
                                     secrets,
+                                    grids,
                                 });
                                 galley
                             };
-                        egui::TextEdit::multiline(&mut *text)
+                        // Placeholder so table and card backgrounds paint behind the text.
+                        let backdrop = ui.painter().add(Shape::Noop);
+                        let out = egui::TextEdit::multiline(&mut *text)
                             .id(id)
                             .frame(egui::Frame::NONE.inner_margin(margin))
                             .desired_width(if wrap { f32::INFINITY } else { 0.0 })
                             .min_size(vec2(avail.x - 2.0 * extra_side, avail.y))
                             .lock_focus(true)
                             .layouter(&mut layouter)
-                            .show(ui)
+                            .show(ui);
+                        (out, backdrop)
                     };
+                    let (out, backdrop) = out;
                     let changed = out.response.changed();
                     if changed {
                         // Line numbers shift on edits: hide again rather than reveal the wrong line.
@@ -360,6 +378,12 @@ impl PaddApp {
                     }
                     if let Some((a, _)) = jump {
                         ui.scroll_to_rect(at(a).expand(60.0), Some(Align::Center));
+                    }
+
+                    // Tables and secrets cards: fills and lines behind the text.
+                    if let Some(c) = cache.as_ref() {
+                        let shapes = grid_shapes(&c.grids, &at, origin.x, clip, &pal);
+                        ui.painter().set(backdrop, Shape::Vec(shapes));
                     }
 
                     // Secrets: [show] [copy] and the mask, drawn in the reserved space.
@@ -434,6 +458,64 @@ impl PaddApp {
             self.info("Copied to clipboard");
         }
     }
+}
+
+/// Backgrounds and lines of the rendered tables and secrets cards that are in view.
+fn grid_shapes(
+    grids: &[markdown::Grid],
+    at: &dyn Fn(usize) -> Rect,
+    x0: f32,
+    clip: Rect,
+    pal: &Palette,
+) -> Vec<Shape> {
+    let mut shapes = Vec::new();
+    let line = Stroke::new(1.0, pal.border);
+    let radius = 6u8;
+    for g in grids {
+        let (Some(&(first, _)), Some(&(_, last))) = (g.rows.first(), g.rows.last()) else {
+            continue;
+        };
+        let (top, bottom) = (at(first).top(), at(last).bottom());
+        if bottom < clip.top() || top > clip.bottom() {
+            continue;
+        }
+        let right = x0 + g.cols.last().copied().unwrap_or(0.0);
+        let outer = Rect::from_min_max(pos2(x0, top), pos2(right, bottom));
+        if g.header {
+            let hb = at(g.rows[0].1).bottom();
+            let r = CornerRadius {
+                nw: radius,
+                ne: radius,
+                sw: 0,
+                se: 0,
+            };
+            shapes.push(Shape::rect_filled(
+                Rect::from_min_max(outer.min, pos2(right, hb)),
+                r,
+                pal.hover,
+            ));
+        }
+        if g.secrets && g.cols.len() > 1 {
+            let r = CornerRadius {
+                nw: radius,
+                sw: radius,
+                ne: 0,
+                se: 0,
+            };
+            let col = Rect::from_min_max(outer.min, pos2(x0 + g.cols[1], bottom));
+            shapes.push(Shape::rect_filled(col, r, pal.hover));
+        }
+        for &(_, end) in &g.rows[..g.rows.len() - 1] {
+            let y = at(end).bottom().round() + 0.5;
+            shapes.push(Shape::line_segment([pos2(x0, y), pos2(right, y)], line));
+        }
+        for &cx in &g.cols[1..g.cols.len() - 1] {
+            let x = (x0 + cx).round() + 0.5;
+            shapes.push(Shape::line_segment([pos2(x, top), pos2(x, bottom)], line));
+        }
+        shapes.push(Shape::rect_stroke(outer, radius, line, StrokeKind::Inside));
+    }
+    shapes
 }
 
 #[cfg(test)]

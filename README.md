@@ -5,7 +5,8 @@ with **encrypted secrets files**. Linux, Windows and macOS: one ~9 MB native bin
 
 - **Tabs**: open several files; drag and drop works; `padd file1 file2` opens files from the command line.
 - **Live Markdown preview while you edit**: headings, bold, italic, code, links, lists, quotes and
-  tables render in place. The line under the cursor shows its raw Markdown. `Ctrl+E` toggles this.
+  tables render in place (tables as aligned grids). The line under the cursor shows its raw Markdown;
+  a table shows its source while the cursor is in it. `Ctrl+E` toggles this.
 - **Syntax highlighting** for structured text and code, re-highlighting only the lines that changed.
 - **Text only**: binary files are refused. UTF-8, UTF-8 BOM and UTF-16 are supported, and CRLF/LF is kept on save.
 - **Large files**: files over 4 MB open in a fast read-only viewer.
@@ -20,8 +21,8 @@ url: https://platform.openai.com
 api key::: sk-proj-abc123
 ```
 
-When the cursor is elsewhere, the value is masked as `••••••••` with **show** and **copy**
-buttons. Copying clears the clipboard after 30 s. Lines that *start* with `:::`
+Consecutive secret lines render as a card: labels on the left, values on the right, masked as
+`••••••••` with **show** and **copy** buttons. The line under the cursor shows its raw text. Copying clears the clipboard after 30 s. Lines that *start* with `:::`
 (Pandoc/Docusaurus directives) are left alone.
 
 ## Encryption

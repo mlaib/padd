@@ -61,6 +61,7 @@ struct LayoutCache {
     key: u64,
     galley: Arc<Galley>,
     secrets: Vec<Secret>,
+    grids: Vec<crate::markdown::Grid>,
 }
 
 struct Tab {
